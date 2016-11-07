@@ -1,9 +1,8 @@
 package com.jackxuechen.liujie.simplelog;
 
-import android.app.Application;
+import android.content.Context;
 
 import com.jackxuechen.liujie.simplelog.abs.AbsLog;
-import com.jackxuechen.liujie.simplelog.abs.ILog;
 import com.jackxuechen.liujie.simplelog.impl.LogPhone;
 
 
@@ -15,44 +14,57 @@ public class Log {
 
     private final String tag = "Log";
     private static Log log;
-    public ILog iLog;
-    private Application mContext;
+
+    public AbsLog mAbsLog;
+
+    private Context mContext;
+
     boolean mInit = false;
-    boolean mPos = false;
-    boolean mPrintLog = false;
+
 
     private Log() {
 
     }
 
-    public void init(boolean isPos, Application context) {
+    public void init(Context context) {
+        init(context, LogConfigBuild.as(context).build());
+    }
+
+
+    public void init(Context context, LogConfigBuild.LogConfig logConfig) {
+        if (mInit) {
+            return;
+        }
         if (context == null) {
-            android.util.Log.e(tag, "context 为 null LOG初始化失败");
+            android.util.Log.e(tag, "context is null LOG init failed");
             mInit = false;
             return;
         }
-
         mContext = context;
-        mPos = isPos;
-        mPrintLog = BuildConfig.DEBUG;
-        if (isPos) {//pos机//
-            if (iLog == null) {
-//                iLog = new LogPos(mContext);
-            }
-        } else {//手机
-            if (iLog == null) {
-                iLog = new LogPhone(mContext, mPrintLog);
-            }
-        }
+        mAbsLog = new LogPhone(mContext, logConfig);
         mInit = true;
-        android.util.Log.v(tag, "LOG初始化成功");
+        android.util.Log.v(tag, "LOG init success");
+    }
 
+    public void init(Context context, AbsLog absLog) {
+        if (mInit) {
+            return;
+        }
+        if (context == null) {
+            android.util.Log.e(tag, "context is null LOG init failed");
+            mInit = false;
+            return;
+        }
+        mContext = context;
+        mAbsLog = absLog;
+        mInit = true;
+        android.util.Log.v(tag, "LOG init success");
     }
 
 
     public boolean checkInit() {
         if (!mInit) {
-            init(mPos, mContext);
+            init(mContext);
             return mInit;
         } else {
             return true;
@@ -66,18 +78,47 @@ public class Log {
         return log;
     }
 
-
-    public synchronized void uploadNow() {
-        ((AbsLog) iLog).setUploadNow(true);
-//        iLog.record(Log.class,"正在上传日志");
-    }
-
     public void flush() {
         if (checkInit()) {
-            iLog.flush();
+            mAbsLog.flush();
         }
     }
 
 
+    public void v(String tag, String msg) {
+        if (checkInit()) {
+            mAbsLog.v(tag, msg);
+        }
+    }
+
+    public void d(String tag, String msg) {
+        if (checkInit()) {
+            mAbsLog.d(tag, msg);
+        }
+    }
+
+    public void i(String tag, String msg) {
+        if (checkInit()) {
+            mAbsLog.i(tag, msg);
+        }
+    }
+
+    public void w(String tag, String msg) {
+        if (checkInit()) {
+            mAbsLog.w(tag, msg);
+        }
+    }
+
+    public void e(String tag, String msg) {
+        if (checkInit()) {
+            mAbsLog.e(tag, msg);
+        }
+    }
+
+
+    public synchronized void uploadNow() {
+        mAbsLog.uploadNow();
+        mAbsLog.v("Log","正在上传日志。");
+    }
 
 }

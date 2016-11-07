@@ -1,11 +1,10 @@
 package com.jackxuechen.liujie.simplelog.impl;
 
-import android.app.Application;
-
+import android.content.Context;
 
 import com.jackxuechen.liujie.simplelog.LogConfigBuild;
-import com.jackxuechen.liujie.simplelog.RecordType;
 import com.jackxuechen.liujie.simplelog.abs.AbsLog;
+import com.jackxuechen.liujie.simplelog.abs.IUpload;
 
 import java.io.Closeable;
 import java.io.File;
@@ -29,41 +28,44 @@ public class LogPhone extends AbsLog {
     SimpleDateFormat mFormat;
     String mSeparator;
     Calendar mCalendar;
-    Application mContext;
+    Context mContext;
     LogConfigBuild.LogConfig mLogConfig;
     StringBuilder sb;
+    IUpload mIUpload;
 
+    public LogPhone(Context context) {
+        this(context, LogConfigBuild.as(context).build());
+    }
 
-    public LogPhone(Application context, boolean isPrintLog) {
+    public LogPhone(Context context, LogConfigBuild.LogConfig logConfig) {
         mFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
         mContext = context;
         mCalendar = Calendar.getInstance();
         mSeparator = "\t";
-        mLogConfig = LogConfigBuild.as(mContext).build();
-        this.isPrintLog = isPrintLog;
+        if (logConfig == null) {
+            mLogConfig = LogConfigBuild.as(context).build();
+        } else {
+            mLogConfig = logConfig;
+        }
+        resetUploadFlag();
+        setPrintLog(mLogConfig.isPrintLog());
+        mIUpload = mLogConfig.getUpload();
         sb = new StringBuilder();
 
     }
 
 
-
-    public void record(Class c, RecordType type, String description, String request, String result) {
-        StringBuffer sb = new StringBuffer();
+    @Override
+    public void record(String level, String tag, String msg) {
+        sb.delete(0, sb.length());
         sb.append(mFormat.format(mCalendar.getTimeInMillis()))
                 .append(mSeparator)
-                .append(c.getSimpleName())
+                .append(level)
                 .append(mSeparator)
-                .append(type)
+                .append(tag)
                 .append(mSeparator)
-                .append(description)
-                .append(mSeparator)
-                .append(request)
-                .append(mSeparator)
-                .append(result)
+                .append(msg)
                 .append("\r\n");
-        if (isPrintLog) {
-            android.util.Log.v(c.getSimpleName(), sb.toString());
-        }
         save(sb.toString().getBytes());
     }
 
@@ -87,13 +89,13 @@ public class LogPhone extends AbsLog {
             file = new File(mLogConfig.getLogDirAndName());
             if (!file.exists()) {
                 file.createNewFile();
-            } else if (file.length() >= mLogConfig.getLogSize() || isUploadNow) {//文件大于100k
-                setUploadNow(false);
+            } else if (file.length() >= mLogConfig.getLogSize() || isUploadNow()) {//文件大于100k
+                resetUploadFlag();
                 moveAndGzip(file);
                 upload();
                 file = new File(mLogConfig.getLogDirAndName());
             }
-            write(file, true, true, bytes, offset, byteCount);
+            write(file, true, false, bytes, offset, byteCount);
 
         } catch (IOException e) {
             e.printStackTrace();
@@ -109,67 +111,9 @@ public class LogPhone extends AbsLog {
 
     @Override
     public synchronized void upload() {
-//        File fDir;
-//        fDir = new File(mLogConfig.getUploadDir());
-//        if (fDir.exists()) {
-//            File[] files = fDir.listFiles();
-//
-//            Observable.from(files)
-//                    .subscribeOn(Schedulers.io())
-//                    .observeOn(Schedulers.io())
-//                    .map(new Func1<File, CommResponse>() {
-//                        @Override
-//                        public CommResponse call(final File file) {
-//                            ParamMap params = new ParamMap();
-//                            CommResponse commResponse = null;
-//                            params.put("filename", file.getName() + ".txt");
-//                            try {
-//                                Source source = Okio.source(file);
-//                                BufferedSource buffer = Okio.buffer(source);
-//                                byte[] bytes = buffer.readByteArray();
-//                                params.put("bytes", bytes);
-//                                commResponse = AccRequestUtils.sendData(Urls.PROCESSOR_LOGCAT_REPORT, params);
-//                            } catch (Exception e) {
-//                                e.printStackTrace();
-//                            }
-//                            AccCommonResponse.dealCommResponse(commResponse, new AccCommonResponse.OnResultListener() {
-//                                @Override
-//                                public void onSuccess(ParamMap data) {
-//                                    file.delete();
-//                                    Log.as().record(LogPhone.class, "删除日志文件成功");
-//                                }
-//
-//                                @Override
-//                                public void onError(AccCommonResponse.ErrorNet e) {
-//                                    Log.as().record(LogPhone.class, e.toString());
-//                                }
-//                            });
-//
-//                            return commResponse;
-//                        }
-//                    })
-//                    .subscribe(new Subscriber<CommResponse>() {
-//                        @Override
-//                        public void onCompleted() {
-//
-//                        }
-//
-//                        @Override
-//                        public void onError(Throwable e) {
-//                            Log.as().record(LogPhone.class, e.toString());
-//                            e.printStackTrace();
-//
-//                        }
-//
-//                        @Override
-//                        public void onNext(CommResponse o) {
-//
-//                        }
-//                    });
-
-
-//        }
-
+        if (mIUpload != null) {
+            mIUpload.upload(mLogConfig.getUploadDir());
+        }
     }
 
     @Override

@@ -1,9 +1,10 @@
 package com.jackxuechen.liujie.simplelog;
 
-import android.app.Application;
 import android.content.Context;
 import android.os.Environment;
 import android.text.TextUtils;
+
+import com.jackxuechen.liujie.simplelog.abs.IUpload;
 
 import java.io.File;
 
@@ -13,36 +14,46 @@ import java.io.File;
 
 public class LogConfigBuild {
     private LogConfig mLogConfig;
-
-
     private String mCacheRootDir;
     private long mLogSize;
-
     private Context mContext;
+    private IUpload mUpload;
+    private boolean mPrintLog;
 
-    private static LogConfigBuild logConfigBuild;
 
-    private LogConfigBuild(Application context) {
+    private static LogConfigBuild mLogConfigBuild;
+
+    private LogConfigBuild(Context context) {
         mContext = context;
         mLogConfig = new LogConfig();
     }
 
-    public static LogConfigBuild as(Application context) {
-        if (logConfigBuild == null) {
-            logConfigBuild = new LogConfigBuild(context);
+    public static LogConfigBuild as(Context context) {
+        if (mLogConfigBuild == null) {
+            mLogConfigBuild = new LogConfigBuild(context);
         }
-        return logConfigBuild;
+        return mLogConfigBuild;
     }
 
 
     public LogConfigBuild setCacheRootDir(String cacheRootDir) {
         mCacheRootDir = cacheRootDir;
-        return logConfigBuild;
+        return mLogConfigBuild;
     }
 
     public LogConfigBuild setLogSize(long logSize) {
         mLogSize = logSize;
-        return logConfigBuild;
+        return mLogConfigBuild;
+    }
+
+    public LogConfigBuild setPrintLog(boolean printLog) {
+        mPrintLog = printLog;
+        return mLogConfigBuild;
+    }
+
+    public LogConfigBuild setUpload(IUpload upload) {
+        mUpload = upload;
+        return mLogConfigBuild;
     }
 
     public LogConfig build() {
@@ -52,17 +63,19 @@ public class LogConfigBuild {
         if (mLogSize <= 100 * 1024) {//100k
             mLogSize = 100 * 1024;
         }
-        mLogConfig.init(mCacheRootDir, mLogSize);
+        mLogConfig.init(mCacheRootDir, mLogSize, mUpload, mPrintLog);
         return mLogConfig;
     }
+
 
     public class LogConfig {
         private String mCacheDir;
         private String mLogName;
         private String mLogDirAndName;
-
+        private boolean mPrintLog;
         private String mUploadDir;
         private long mLogSize;
+        private IUpload mUpload;
 
 
         private StringBuilder mTempSb;
@@ -72,7 +85,10 @@ public class LogConfigBuild {
         }
 
 
-        public void init(String rootDir, long logSize) {
+        public void init(String rootDir, long logSize, IUpload upload, boolean isPrintLog) {
+            mPrintLog = isPrintLog;
+            mUpload = upload;
+
             mTempSb.delete(0, mTempSb.length());
             mTempSb.append(rootDir)
                     .append(File.separator)
@@ -108,6 +124,14 @@ public class LogConfigBuild {
 
         public String getUploadDir() {
             return mUploadDir;
+        }
+
+        public boolean isPrintLog() {
+            return mPrintLog;
+        }
+
+        public IUpload getUpload() {
+            return mUpload;
         }
     }
 }

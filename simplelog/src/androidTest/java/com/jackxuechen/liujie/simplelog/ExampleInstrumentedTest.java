@@ -23,4 +23,6 @@ public class ExampleInstrumentedTest {
 
         assertEquals("com.jackxuechen.liujie.simplelog.test", appContext.getPackageName());
     }
+
+
 }
