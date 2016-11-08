@@ -1,7 +1,5 @@
 package com.jackxuechen.liujie.logtest;
 
-import android.widget.TextView;
-
 import com.jackxuechen.liujie.simplelog.abs.IUpload;
 
 import java.io.Closeable;
@@ -13,20 +11,15 @@ import okio.Okio;
 import okio.Source;
 import rx.Observable;
 import rx.Subscriber;
-import rx.android.schedulers.AndroidSchedulers;
 import rx.functions.Func1;
+import rx.schedulers.Schedulers;
 
 /**
  * Created by liujie on 16-11-7.
+ * 实现IUpload 接口 当日志文件大小超过100k时，会触发 IUpload接口的upload（String LogCacheDirPath） 方法
  */
 
 public class MyUpload implements IUpload {
-
-    TextView mTextView;
-
-    public MyUpload(TextView textView) {
-        mTextView = textView;
-    }
 
     @Override
     public void upload(String LogCacheDirPath) {
@@ -35,27 +28,24 @@ public class MyUpload implements IUpload {
         if (fDir.exists()) {
             File[] files = fDir.listFiles();
             Observable.from(files)
-                    .flatMap(new Func1<File, Observable<String>>() {
+                    .observeOn(Schedulers.io())
+                    .subscribeOn(Schedulers.io())
+                    .flatMap(new Func1<File, Observable<Boolean>>() {
                         @Override
-                        public Observable<String> call(final File file) {
-                            return Observable.create(new Observable.OnSubscribe<String>() {
+                        public Observable<Boolean> call(final File file) {
+                            return Observable.create(new Observable.OnSubscribe<Boolean>() {
                                 @Override
-                                public void call(Subscriber<? super String> subscriber) {
+                                public void call(Subscriber<? super Boolean> subscriber) {
                                     Source source = null;
-
                                     BufferedSource bufferedSource = null;
-
                                     GzipSource gzipSource = null;
-
                                     try {
-
                                         source = Okio.source(file);
                                         gzipSource = new GzipSource(source);
                                         bufferedSource = Okio.buffer(gzipSource);
-
-                                        String content = bufferedSource.readUtf8();
-                                        file.delete();
-                                        subscriber.onNext(content);
+                                        byte[] bytes = bufferedSource.readByteArray();
+                                        //// TODO: 16-11-8 上传到网络或其他操作
+                                        subscriber.onNext(file.delete());
                                         subscriber.onCompleted();
 
                                     } catch (Exception e) {
@@ -70,8 +60,7 @@ public class MyUpload implements IUpload {
                             });
                         }
                     })
-                    .observeOn(AndroidSchedulers.mainThread())
-                    .subscribe(new Subscriber<String>() {
+                    .subscribe(new Subscriber<Boolean>() {
                         @Override
                         public void onCompleted() {
 
@@ -83,8 +72,8 @@ public class MyUpload implements IUpload {
                         }
 
                         @Override
-                        public void onNext(String s) {
-                            mTextView.setText(s);
+                        public void onNext(Boolean b) {
+
                         }
                     });
 

@@ -35,27 +35,56 @@ public class LogConfigBuild {
         return mLogConfigBuild;
     }
 
-
+    /**
+     * @param cacheRootDir 日志目录根目录
+     * @return
+     */
     public LogConfigBuild setCacheRootDir(String cacheRootDir) {
         mCacheRootDir = cacheRootDir;
         return mLogConfigBuild;
     }
 
+    /**
+     * 设置缓存日志大小，默认为100kb，
+     * 以100kb为例，该大小是缓存大小，经过压缩后实际待上传的日志大小在6kb左右
+     * 日志每次达到100k会触发IUpload接口的upload（String path）方法
+     *
+     * @param logSize 日志大小 bit
+     * @return
+     */
     public LogConfigBuild setLogSize(long logSize) {
         mLogSize = logSize;
         return mLogConfigBuild;
     }
 
+    /**
+     * 设置是否在控制台打印日志
+     * 默认关闭
+     *
+     * @param printLog
+     * @return
+     */
     public LogConfigBuild setPrintLog(boolean printLog) {
         mPrintLog = printLog;
         return mLogConfigBuild;
     }
 
+    /**
+     * 设置上传类
+     *
+     * @param upload
+     * @return
+     */
     public LogConfigBuild setUpload(IUpload upload) {
         mUpload = upload;
         return mLogConfigBuild;
     }
 
+    /**
+     * 返回配置实例
+     *
+     * @return
+     */
     public LogConfig build() {
         if (TextUtils.isEmpty(mCacheRootDir)) {
             mCacheRootDir = Environment.getExternalStorageDirectory().getPath() + File.separator + mContext.getPackageName();
@@ -92,13 +121,12 @@ public class LogConfigBuild {
             mTempSb.delete(0, mTempSb.length());
             mTempSb.append(rootDir)
                     .append(File.separator)
-                    .append("cache");
+                    .append("cache")
+                    .append(File.separator);
             mCacheDir = mTempSb.toString();
             mLogName = "record";
 
-            mLogDirAndName = mTempSb.append(File.separator)
-                    .append(mLogName)
-                    .toString();
+            mLogDirAndName = mTempSb.append(mLogName).toString();
             mTempSb.delete(0, mTempSb.length());
             mUploadDir = mTempSb.append(mCacheDir)
                     .append(File.separator)
@@ -106,30 +134,66 @@ public class LogConfigBuild {
             mLogSize = logSize;//100k
         }
 
+        /**
+         * 获取日志缓存根路径
+         *
+         * @return
+         */
         public String getCacheDir() {
             return mCacheDir;
         }
 
+        /**
+         * 获取日志缓存文件名字
+         * 默认为record
+         *
+         * @return
+         */
         public String getLogName() {
             return mLogName;
         }
 
+        /**
+         * 获取日志缓存文件全路径+文件名
+         *
+         * @return
+         */
         public String getLogDirAndName() {
             return mLogDirAndName;
         }
 
+        /**
+         * 获取日志缓存大小
+         *
+         * @return
+         */
         public long getLogSize() {
             return mLogSize;
         }
 
+        /**
+         * 获取待上传路径
+         *
+         * @return
+         */
         public String getUploadDir() {
             return mUploadDir;
         }
 
+        /**
+         * 是否打印日志
+         *
+         * @return
+         */
         public boolean isPrintLog() {
             return mPrintLog;
         }
 
+        /**
+         * 获取上传类
+         *
+         * @return
+         */
         public IUpload getUpload() {
             return mUpload;
         }
