@@ -5,14 +5,14 @@ import com.jackxuechen.liujie.simplelog.abs.IUpload;
 import java.io.Closeable;
 import java.io.File;
 
+import io.reactivex.Observable;
+import io.reactivex.Observer;
+import io.reactivex.disposables.Disposable;
+import io.reactivex.schedulers.Schedulers;
 import okio.BufferedSource;
 import okio.GzipSource;
 import okio.Okio;
 import okio.Source;
-import rx.Observable;
-import rx.Subscriber;
-import rx.functions.Func1;
-import rx.schedulers.Schedulers;
 
 /**
  * Created by liujie on 16-11-7.
@@ -27,52 +27,46 @@ public class MyUpload implements IUpload {
         fDir = new File(LogCacheDirPath);
         if (fDir.exists()) {
             File[] files = fDir.listFiles();
-            Observable.from(files)
+
+            Observable.fromArray(files)
                     .observeOn(Schedulers.io())
                     .subscribeOn(Schedulers.io())
-                    .flatMap(new Func1<File, Observable<Boolean>>() {
+                    .subscribe(new Observer<File>() {
                         @Override
-                        public Observable<Boolean> call(final File file) {
-                            return Observable.create(new Observable.OnSubscribe<Boolean>() {
-                                @Override
-                                public void call(Subscriber<? super Boolean> subscriber) {
-                                    Source source = null;
-                                    BufferedSource bufferedSource = null;
-                                    GzipSource gzipSource = null;
-                                    try {
-                                        source = Okio.source(file);
-                                        gzipSource = new GzipSource(source);
-                                        bufferedSource = Okio.buffer(gzipSource);
-                                        byte[] bytes = bufferedSource.readByteArray();
-                                        //// TODO: 16-11-8 上传到网络或其他操作
-                                        subscriber.onNext(file.delete());
-                                        subscriber.onCompleted();
+                        public void onSubscribe(Disposable d) {
 
-                                    } catch (Exception e) {
-                                        e.printStackTrace();
-
-                                    } finally {
-
-                                        closeQuietly(bufferedSource);
-
-                                    }
-                                }
-                            });
                         }
-                    })
-                    .subscribe(new Subscriber<Boolean>() {
-                        @Override
-                        public void onCompleted() {
 
+                        @Override
+                        public void onNext(File file) {
+                            Source source = null;
+                            BufferedSource bufferedSource = null;
+                            GzipSource gzipSource = null;
+                            try {
+                                source = Okio.source(file);
+                                gzipSource = new GzipSource(source);
+                                bufferedSource = Okio.buffer(gzipSource);
+                                byte[] bytes = bufferedSource.readByteArray();
+                                //// TODO: 16-11-8 上传到网络或其他操作
+                                file.delete();
+
+                            } catch (Exception e) {
+                                e.printStackTrace();
+
+                            } finally {
+
+                                closeQuietly(bufferedSource);
+
+                            }
                         }
 
                         @Override
                         public void onError(Throwable e) {
-                            e.printStackTrace();
+
                         }
 
                         @Override
-                        public void onNext(Boolean b) {
+                        public void onComplete() {
 
                         }
                     });
